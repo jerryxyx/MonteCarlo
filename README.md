@@ -6,6 +6,9 @@ Author: Jerry Xia
 
 Date: 2018/06/19
 
+*Note: The advanced Marckdown features such as math expression may not be compatible in GitHub, please see README.pdf instead if you want more details*
+
+
 ## 1 Introduction
 
 This is a Python Notebook about optimal hedged Monte Carlo (OHMC) in option pricing. We invoke this method to price European options and make comparison with regular Monte Carlo and Black-Scholes formula.
