@@ -11762,13 +11762,14 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="1-Introduction">1 Introduction<a class="anchor-link" href="#1-Introduction">&#182;</a></h2><h3 id="1.1-Facts">1.1 Facts<a class="anchor-link" href="#1.1-Facts">&#182;</a></h3><ul>
+<h2 id="1-Introduction">1 Introduction<a class="anchor-link" href="#1-Introduction">&#182;</a></h2><p>This is a Python Notebook about optimal hedged Monte Carlo (OHMC) in option pricing. We invoke this method to price European options and make comparison with regular Monte Carlo and Black-Scholes formula.</p>
+<h3 id="1.1-Facts">1.1 Facts<a class="anchor-link" href="#1.1-Facts">&#182;</a></h3><ul>
 <li>The option price is not simply the average value of the discounted future pay-off over the objective (or historical) probability distribution</li>
 <li>The requirement of absence of arbitrage opportunities is equivalent to the existence of "risk-neutral measure", such that the price is indeed its average discounted future pay-off.</li>
 <li>Risk in option trading cannot be eliminated</li>
 </ul>
 <h3 id="1.2-Objective">1.2 Objective<a class="anchor-link" href="#1.2-Objective">&#182;</a></h3><ul>
-<li>It would be satisfactory to have a option theory where the objective stochastic process of the underlying is used to calculated the option price, the hedge strategy and the <em>residual risk</em>.</li>
+<li>It would be satisfactory to have an option theory where the objective stochastic process of the underlying is used to calculate the option price, the hedge strategy and the <em>residual risk</em>.</li>
 </ul>
 <h3 id="1.3-Advantages">1.3 Advantages<a class="anchor-link" href="#1.3-Advantages">&#182;</a></h3><ul>
 <li>It is a versatile methods to price complicated path-dependent options.</li>
@@ -11796,7 +11797,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="3-Methodology">3 Methodology<a class="anchor-link" href="#3-Methodology">&#182;</a></h2><h3 id="3.1-Simbols-Definition">3.1 Simbols Definition<a class="anchor-link" href="#3.1-Simbols-Definition">&#182;</a></h3><p>Option price always requires to work backward. That is because the option price is known exactly at the maturity. As with other schemes, we determine the option price step by step from the maturity $t=K\tau=T$ to the present time $t=0$. The unit of time being $\tau$, for example, one day. We simulate $N$ trajectories. In trajectory i, the price of the underlying asset at time $k\tau$ is denoted as $S_k^{(i)}$. The price of the derivative at time $k\tau$ is denoted as $C_k$, and the hedge function is $H_k$. We define an optimal hedged portfolio as
+<h2 id="3-Methodology">3 Methodology<a class="anchor-link" href="#3-Methodology">&#182;</a></h2><h3 id="3.1-Simbol-Definition">3.1 Simbol Definition<a class="anchor-link" href="#3.1-Simbol-Definition">&#182;</a></h3><p>Option price always requires to work backward. That is because the option price is known exactly at the maturity. As with other schemes, we determine the option price step by step from the maturity $t=K\tau=T$ to the present time $t=0$. The unit of time being $\tau$, for example, one day. We simulate $N$ trajectories. In trajectory i, the price of the underlying asset at time $k\tau$ is denoted as $S_k^{(i)}$. The price of the derivative at time $k\tau$ is denoted as $C_k$, and the hedge function is $H_k$. We define an optimal hedged portfolio as
 $$W_k^{(i)} = C_k(S_k^{(i)}) + H_k(S_k^{(i)})S_k^{(i)}$$
 The one-step change of our portfolio is
 $$\Delta W_k^{(i)}= df(k,k+1) C_{k+1}(S_{k+1}^{(i)}) - C_k(S_k^{(i)}) + H_k(S_{k}^{(i)}) (df(k,k+1) S_{k+1}^{(i)} - S_{k}^{(i)})$$
@@ -11805,7 +11806,8 @@ Where $df(k,k+1)$ is the discounted factor from time $k\tau$ to $(k+1) \tau$</p>
 \begin{align}
 \mbox{minimize}\quad & \quad Var[\Delta W_k]\\
 \mbox{subject to}\quad & \quad E[\Delta W_k]=0
-\end{align}<h3 id="3.3-Basis-Functions">3.3 Basis Functions<a class="anchor-link" href="#3.3-Basis-Functions">&#182;</a></h3><p>The original optimization is very difficult to solve. Thus we assume a set of basis function and solved it in such subspace.</p>
+\end{align}<p>It means we should try to minimize the realized volatility of hedged portfolio while maintaining the expected value of portfolio unchanged.</p>
+<h3 id="3.3-Basis-Functions">3.3 Basis Functions<a class="anchor-link" href="#3.3-Basis-Functions">&#182;</a></h3><p>The original optimization is very difficult to solve. Thus we assume a set of basis function and solved it in such subspace. We use $N_C$and $N_H$ to denote the number of basis functions for price and hedge.</p>
 \begin{align}
 C_k(\cdot) &= \sum_{i=0}^{N_C} a_{k,i} A_i(\cdot)\\
 H_k(\cdot) &= \sum_{i=0}^{N_H} b_{k,i} B_i(\cdot)
@@ -11853,7 +11855,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
     \min_{x} \quad & \frac{1}{2} x^T P x + q^T x\\
     \mbox{subject to} \quad &G x \preceq h\\
     &A x = b
-\end{align}<p>Note that $x^T$ means the transpose of vector x, and $G x \preceq h$denotes the inequality is taken element-wise over the vectors $G x$ and $h$. The objective function is convex if and only if the matrix $P$ is positive-semidefinite(Hermitian matrix all of whose eigenvalues are nonnegative), which is the realm we concerns with.</p>
+\end{align}<p>Note that $x^T$ means the transpose of vector x, and $G x \preceq h$denotes the inequality is taken element-wise over the vectors $G x$ and $h$. The objective function is convex if and only if the matrix $P$ is positive-semidefinite(Hermitian matrix all of whose eigenvalues are nonnegative), which is the realm we concern with.</p>
 <p>Recall that the constrained optimization problem:</p>
 \begin{align}
 \arg\min_{c_k}\quad & \quad  v_{k}^T Q_k c_k + \frac{1}{2}c_k^T Q_k^T Q_k c_k\\
@@ -11883,7 +11885,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[489]:</div>
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -11899,7 +11901,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[516]:</div>
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">risk_free_rate</span> <span class="o">=</span> <span class="mf">0.02</span>
@@ -11907,7 +11909,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 <span class="n">volatility</span> <span class="o">=</span> <span class="mf">0.3</span>
 <span class="n">strike</span> <span class="o">=</span> <span class="mi">100</span>
 <span class="n">stock_price</span> <span class="o">=</span> <span class="mi">100</span>
-<span class="n">n_trails</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">n_trails</span> <span class="o">=</span> <span class="mi">1000</span>
 <span class="n">n_steps</span> <span class="o">=</span> <span class="mi">200</span>
 <span class="n">func_list</span> <span class="o">=</span> <span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">]</span>
 </pre></div>
@@ -11919,7 +11921,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[539]:</div>
+<div class="prompt input_prompt">In&nbsp;[47]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">MonteCarlo</span><span class="p">:</span>
@@ -12026,7 +12028,9 @@ df(0,1)\ C_1(S_1), \quad & k=0
         <span class="n">C1</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">ak</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">func</span><span class="p">(</span><span class="n">S1</span><span class="p">)</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">func_list</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
         <span class="n">sol</span> <span class="o">=</span> <span class="n">solvers</span><span class="o">.</span><span class="n">coneqp</span><span class="p">(</span><span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span><span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span><span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sol</span> <span class="o">=</span> <span class="n">sol</span>
-        <span class="c1"># (price0,hedge0) := (sol[&quot;x&quot;][0], sol[&quot;x&quot;][1])</span>
+        <span class="n">residual_risk</span> <span class="o">=</span> <span class="p">(</span><span class="n">v0</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">v0</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">sol</span><span class="p">[</span><span class="s2">&quot;primal objective&quot;</span><span class="p">])</span><span class="o">/</span><span class="n">n_trails</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">residual_risk</span> <span class="o">=</span> <span class="n">residual_risk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>    <span class="c1"># the value of unit matrix</span>
+        
         <span class="k">return</span><span class="p">({</span><span class="s2">&quot;OHMC&quot;</span><span class="p">:</span> <span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="s2">&quot;regular MC&quot;</span><span class="p">:</span> <span class="n">regular_mc_price</span><span class="p">,</span><span class="s2">&quot;Black-Scholes&quot;</span><span class="p">:</span><span class="n">black_sholes_price</span><span class="p">})</span>
     
     <span class="k">def</span> <span class="nf">hedging</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -12038,7 +12042,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
         <span class="n">d1</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">S</span><span class="o">/</span><span class="n">K</span><span class="p">)</span><span class="o">+</span><span class="n">r</span><span class="o">*</span><span class="n">T</span> <span class="o">+</span><span class="mf">0.5</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">T</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">sigma</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">T</span><span class="p">))</span>
         <span class="n">d2</span> <span class="o">=</span> <span class="n">d1</span> <span class="o">-</span> <span class="n">sigma</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
         <span class="n">N</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">sp</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">return</span><span class="p">({</span><span class="s2">&quot;OHMC&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="s2">&quot;Black-Scholes&quot;</span><span class="p">:</span><span class="o">-</span><span class="n">N</span><span class="p">(</span><span class="n">d1</span><span class="p">)})</span>
+        <span class="k">return</span><span class="p">({</span><span class="s2">&quot;OHMC optimal hedge&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span><span class="s2">&quot;Black-Scholes delta hedge&quot;</span><span class="p">:</span><span class="o">-</span><span class="n">N</span><span class="p">(</span><span class="n">d1</span><span class="p">),</span><span class="s2">&quot;OHMC residual risk&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">residual_risk</span><span class="p">})</span>
         
     
 </pre></div>
@@ -12050,7 +12054,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[540]:</div>
+<div class="prompt input_prompt">In&nbsp;[48]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">mc</span> <span class="o">=</span> <span class="n">MonteCarlo</span><span class="p">(</span><span class="n">stock_price</span><span class="p">,</span><span class="n">strike</span><span class="p">,</span><span class="n">time_to_maturity</span><span class="p">,</span><span class="n">risk_free_rate</span><span class="p">,</span><span class="n">volatility</span><span class="p">)</span>
@@ -12063,7 +12067,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[541]:</div>
+<div class="prompt input_prompt">In&nbsp;[49]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">price_matrix</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">)</span>
@@ -12076,7 +12080,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[542]:</div>
+<div class="prompt input_prompt">In&nbsp;[50]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">prices</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">pricing</span><span class="p">(</span><span class="n">func_list</span><span class="o">=</span><span class="n">func_list</span><span class="p">)</span>
@@ -12093,7 +12097,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;OHMC&#39;: 13.083578265390175, &#39;regular MC&#39;: 12.620065898009344, &#39;Black-Scholes&#39;: 12.82158139269142}
+<pre>{&#39;OHMC&#39;: 12.144790426962716, &#39;regular MC&#39;: 11.90367155653051, &#39;Black-Scholes&#39;: 12.821581392691421}
 </pre>
 </div>
 </div>
@@ -12104,7 +12108,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[543]:</div>
+<div class="prompt input_prompt">In&nbsp;[51]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">hedges</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">hedging</span><span class="p">()</span>
@@ -12121,24 +12125,11 @@ df(0,1)\ C_1(S_1), \quad & k=0
 
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;OHMC&#39;: -0.6400680095414591, &#39;Black-Scholes&#39;: -0.5857659364695248}
+<pre>{&#39;OHMC optimal hedge&#39;: -0.6038876634088152, &#39;Black-Scholes delta hedge&#39;: -0.58576593646952479, &#39;OHMC residual risk&#39;: -5.820766091346741e-14}
 </pre>
 </div>
 </div>
 
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span> 
-</pre></div>
-
-</div>
 </div>
 </div>
 
