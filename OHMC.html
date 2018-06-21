@@ -11885,7 +11885,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -11901,7 +11901,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">risk_free_rate</span> <span class="o">=</span> <span class="mf">0.02</span>
@@ -11921,7 +11921,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[47]:</div>
+<div class="prompt input_prompt">In&nbsp;[31]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">MonteCarlo</span><span class="p">:</span>
@@ -11971,7 +11971,88 @@ df(0,1)\ C_1(S_1), \quad & k=0
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;please enter the option type: (c/p)&quot;</span><span class="p">)</span>
         <span class="k">pass</span>
     
+    <span class="k">def</span> <span class="nf">MCPricer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">option_type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">):</span>
+        <span class="n">price_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">price_matrix</span>
+        <span class="c1"># k = n_steps</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span><span class="o">*</span><span class="n">dt</span><span class="p">)</span>
+        <span class="n">n_basis</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">func_list</span><span class="p">)</span>
+        <span class="n">n_trails</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_trails</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
+        
+        <span class="k">if</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;c&quot;</span><span class="p">):</span>
+            <span class="n">payoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">price_matrix</span><span class="p">[:,</span><span class="n">n_steps</span><span class="p">]</span> <span class="o">-</span> <span class="n">strike</span><span class="p">)</span>
+        <span class="k">elif</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;p&quot;</span><span class="p">):</span>
+            <span class="n">payoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">strike</span> <span class="o">-</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="n">n_steps</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;please enter the option type: (c/p)&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        
+        <span class="n">payoff</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">payoff</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">payoff</span><span class="p">))</span>
+        <span class="n">vk</span> <span class="o">=</span> <span class="n">payoff</span><span class="o">*</span><span class="n">df</span>
+        <span class="n">regular_mc_price</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">payoff</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">risk_free_rate</span><span class="o">*</span><span class="n">time_to_maturity</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mc_price</span> <span class="o">=</span> <span class="n">regular_mc_price</span>
+        <span class="k">return</span> <span class="n">regular_mc_price</span>
+        
+    <span class="k">def</span> <span class="nf">OHMCPricer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">option_type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">func_list</span><span class="o">=</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">]):</span>
+        <span class="k">def</span> <span class="nf">_calculate_Q_matrix</span><span class="p">(</span><span class="n">S_k</span><span class="p">,</span><span class="n">S_kp1</span><span class="p">,</span><span class="n">df</span><span class="p">,</span><span class="n">func_list</span><span class="p">):</span>
+            <span class="n">dS</span> <span class="o">=</span> <span class="n">df</span><span class="o">*</span><span class="n">S_kp1</span> <span class="o">-</span> <span class="n">S_k</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">func</span><span class="p">(</span><span class="n">S_k</span><span class="p">)</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">func_list</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">func</span><span class="p">(</span><span class="n">S_k</span><span class="p">)</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">func_list</span><span class="p">])</span><span class="o">*</span><span class="n">dS</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="o">-</span><span class="n">A</span><span class="p">,</span><span class="n">B</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">price_matrix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">price_matrix</span>
+        <span class="c1"># k = n_steps</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span><span class="o">*</span><span class="n">dt</span><span class="p">)</span>
+        <span class="n">n_basis</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">func_list</span><span class="p">)</span>
+        <span class="n">n_trails</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_trails</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
+        
+        <span class="k">if</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;c&quot;</span><span class="p">):</span>
+            <span class="n">payoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">price_matrix</span><span class="p">[:,</span><span class="n">n_steps</span><span class="p">]</span> <span class="o">-</span> <span class="n">strike</span><span class="p">)</span>
+        <span class="k">elif</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;p&quot;</span><span class="p">):</span>
+            <span class="n">payoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">strike</span> <span class="o">-</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="n">n_steps</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;please enter the option type: (c/p)&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        
+        <span class="n">payoff</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">payoff</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">payoff</span><span class="p">))</span>
+        <span class="n">vk</span> <span class="o">=</span> <span class="n">payoff</span><span class="o">*</span><span class="n">df</span>
+<span class="c1">#         print(&quot;regular MC price&quot;,regular_mc_price)</span>
     
+        <span class="c1"># k = 1,...,n_steps-1</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">Sk</span> <span class="o">=</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">Skp1</span> <span class="o">=</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">Qk</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">_calculate_Q_matrix</span><span class="p">(</span><span class="n">Sk</span><span class="p">,</span><span class="n">Skp1</span><span class="p">,</span><span class="n">df</span><span class="p">,</span><span class="n">func_list</span><span class="p">))</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">Qk</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">Qk</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">Qk</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">vk</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">Qk</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="o">-</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">vk</span>
+            <span class="n">sol</span> <span class="o">=</span> <span class="n">solvers</span><span class="o">.</span><span class="n">coneqp</span><span class="p">(</span><span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span><span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span><span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">)</span>
+            <span class="n">ak</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][:</span><span class="n">n_basis</span><span class="p">]</span>
+            <span class="n">bk</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][</span><span class="n">n_basis</span><span class="p">:]</span>
+            <span class="n">vk</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">func</span><span class="p">(</span><span class="n">price_matrix</span><span class="p">[:,</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">func_list</span><span class="p">]))</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">ak</span><span class="o">*</span><span class="n">df</span>
+        
+        <span class="c1"># k = 0</span>
+        <span class="n">v0</span> <span class="o">=</span> <span class="n">vk</span>
+        <span class="n">S0</span> <span class="o">=</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">S1</span> <span class="o">=</span> <span class="n">price_matrix</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">dS0</span> <span class="o">=</span> <span class="n">df</span><span class="o">*</span><span class="n">S1</span> <span class="o">-</span> <span class="n">S0</span>
+        <span class="n">Q0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_trails</span><span class="p">)[:,</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span><span class="n">dS0</span><span class="p">[:,</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Q0</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">Q0</span><span class="p">)</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">Q0</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">Q0</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">Q0</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">v0</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">Q0</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="o">-</span> <span class="n">matrix</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">v0</span>
+        <span class="n">C1</span> <span class="o">=</span> <span class="n">matrix</span><span class="p">(</span><span class="n">ak</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">func</span><span class="p">(</span><span class="n">S1</span><span class="p">)</span> <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">func_list</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">solvers</span><span class="o">.</span><span class="n">coneqp</span><span class="p">(</span><span class="n">P</span><span class="o">=</span><span class="n">P</span><span class="p">,</span><span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">,</span><span class="n">A</span><span class="o">=</span><span class="n">A</span><span class="p">,</span><span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sol</span> <span class="o">=</span> <span class="n">sol</span>
+<span class="c1">#         residual_risk = (v0.T*v0 + 2*sol[&quot;primal objective&quot;])/n_trails</span>
+<span class="c1">#         self.residual_risk = residual_risk[0]    # the value of unit matrix</span>
+        
+        <span class="k">return</span> <span class="n">sol</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
     
     <span class="k">def</span> <span class="nf">pricing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">option_type</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">func_list</span><span class="o">=</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">]):</span>
         
@@ -11986,6 +12067,9 @@ df(0,1)\ C_1(S_1), \quad & k=0
         <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span><span class="o">*</span><span class="n">dt</span><span class="p">)</span>
         <span class="n">n_basis</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">func_list</span><span class="p">)</span>
+        <span class="n">n_trails</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_trails</span>
+        <span class="n">n_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_steps</span>
+        
         <span class="k">if</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;c&quot;</span><span class="p">):</span>
             <span class="n">payoff</span> <span class="o">=</span> <span class="p">(</span><span class="n">price_matrix</span><span class="p">[:,</span><span class="n">n_steps</span><span class="p">]</span> <span class="o">-</span> <span class="n">strike</span><span class="p">)</span>
         <span class="k">elif</span><span class="p">(</span><span class="n">option_type</span><span class="o">==</span><span class="s2">&quot;p&quot;</span><span class="p">):</span>
@@ -12054,7 +12138,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[48]:</div>
+<div class="prompt input_prompt">In&nbsp;[32]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">mc</span> <span class="o">=</span> <span class="n">MonteCarlo</span><span class="p">(</span><span class="n">stock_price</span><span class="p">,</span><span class="n">strike</span><span class="p">,</span><span class="n">time_to_maturity</span><span class="p">,</span><span class="n">risk_free_rate</span><span class="p">,</span><span class="n">volatility</span><span class="p">)</span>
@@ -12067,7 +12151,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[49]:</div>
+<div class="prompt input_prompt">In&nbsp;[33]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">price_matrix</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">)</span>
@@ -12080,7 +12164,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[50]:</div>
+<div class="prompt input_prompt">In&nbsp;[34]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">prices</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">pricing</span><span class="p">(</span><span class="n">func_list</span><span class="o">=</span><span class="n">func_list</span><span class="p">)</span>
@@ -12097,7 +12181,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;OHMC&#39;: 12.144790426962716, &#39;regular MC&#39;: 11.90367155653051, &#39;Black-Scholes&#39;: 12.821581392691421}
+<pre>{&#39;OHMC&#39;: 12.390658176585488, &#39;regular MC&#39;: 13.349388675796275, &#39;Black-Scholes&#39;: 12.821581392691421}
 </pre>
 </div>
 </div>
@@ -12108,7 +12192,7 @@ df(0,1)\ C_1(S_1), \quad & k=0
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[51]:</div>
+<div class="prompt input_prompt">In&nbsp;[35]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">hedges</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">hedging</span><span class="p">()</span>
@@ -12125,11 +12209,741 @@ df(0,1)\ C_1(S_1), \quad & k=0
 
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;OHMC optimal hedge&#39;: -0.6038876634088152, &#39;Black-Scholes delta hedge&#39;: -0.58576593646952479, &#39;OHMC residual risk&#39;: -5.820766091346741e-14}
+<pre>{&#39;OHMC optimal hedge&#39;: -0.6452294234211865, &#39;Black-Scholes delta hedge&#39;: -0.58576593646952479, &#39;OHMC residual risk&#39;: -2.9103830456733704e-14}
 </pre>
 </div>
 </div>
 
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="4-Methods-Comparison">4 Methods Comparison<a class="anchor-link" href="#4-Methods-Comparison">&#182;</a></h2><p>In this part, we discuss the performance of OHMC and regular MC. The underlying stochastic process is geometric brownian motion, so the explicit solution is well-known as Black-Scholes formula. In the following, we compare the absolute error with respect to the Black-Scholes price corresponding to trajactories number and runtime. The result is displayed by scatter plots.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[36]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">timeit</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[45]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">efficiency_comparison</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">):</span>
+    <span class="n">mc</span> <span class="o">=</span> <span class="n">MonteCarlo</span><span class="p">(</span><span class="n">stock_price</span><span class="p">,</span><span class="n">strike</span><span class="p">,</span><span class="n">time_to_maturity</span><span class="p">,</span><span class="n">risk_free_rate</span><span class="p">,</span><span class="n">volatility</span><span class="p">)</span>
+    <span class="c1"># black scholes</span>
+    <span class="n">bs_start</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    <span class="n">bs_price</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">BlackScholesPricer</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+    <span class="n">bs_end</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    
+    <span class="c1"># regular MC</span>
+    <span class="n">rmc_start</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">mc_price</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">MCPricer</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+    <span class="n">rmc_end</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    
+    <span class="c1"># OHMC</span>
+    <span class="n">ohmc_start</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    <span class="n">mc</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">)</span>
+    <span class="n">ohmc_price</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">OHMCPricer</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+    <span class="n">ohmc_end</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+    
+    <span class="n">bs_runtime</span> <span class="o">=</span> <span class="n">bs_end</span> <span class="o">-</span> <span class="n">bs_start</span>
+    <span class="n">mc_runtime</span> <span class="o">=</span> <span class="n">rmc_end</span> <span class="o">-</span> <span class="n">rmc_start</span>
+    <span class="n">ohmc_runtime</span> <span class="o">=</span> <span class="n">ohmc_end</span><span class="o">-</span><span class="n">ohmc_start</span>
+    
+    <span class="n">mc_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">mc_price</span> <span class="o">-</span> <span class="n">bs_price</span><span class="p">)</span>
+    <span class="n">ohmc_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ohmc_price</span> <span class="o">-</span> <span class="n">bs_price</span><span class="p">)</span>
+    
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;method&quot;</span><span class="p">:[</span><span class="s2">&quot;Black Scholes&quot;</span><span class="p">,</span><span class="s2">&quot;MC&quot;</span><span class="p">,</span><span class="s2">&quot;OHMC&quot;</span><span class="p">],</span><span class="s2">&quot;runtime&quot;</span><span class="p">:[</span><span class="n">bs_runtime</span><span class="p">,</span><span class="n">mc_runtime</span><span class="p">,</span><span class="n">ohmc_runtime</span><span class="p">],</span>
+              <span class="s2">&quot;err&quot;</span><span class="p">:[</span><span class="mi">0</span><span class="p">,</span><span class="n">mc_err</span><span class="p">,</span><span class="n">ohmc_err</span><span class="p">],</span> <span class="s2">&quot;n_trails&quot;</span><span class="p">:[</span><span class="n">n_trails</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;n_steps&quot;</span><span class="p">:[</span><span class="n">n_steps</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[46]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">efficiency_comparison</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span><span class="mi">200</span><span class="p">))</span>
+<span class="n">df2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">efficiency_comparison</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">200</span><span class="p">))</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">df1</span><span class="p">,</span><span class="n">df2</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[46]:</div>
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>err</th>
+      <th>method</th>
+      <th>n_steps</th>
+      <th>n_trails</th>
+      <th>runtime</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.000000</td>
+      <td>Black Scholes</td>
+      <td>200</td>
+      <td>5000</td>
+      <td>0.003281</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.399365</td>
+      <td>MC</td>
+      <td>200</td>
+      <td>5000</td>
+      <td>0.146768</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.138306</td>
+      <td>OHMC</td>
+      <td>200</td>
+      <td>5000</td>
+      <td>0.303353</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.000000</td>
+      <td>Black Scholes</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.000299</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2.151938</td>
+      <td>MC</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.001599</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>0.542016</td>
+      <td>OHMC</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.042877</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[53]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">10000</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[53]:</div>
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>array([ 100,  600, 1100, 1600, 2100, 2600, 3100, 3600, 4100, 4600, 5100,
+       5600, 6100, 6600, 7100, 7600, 8100, 8600, 9100, 9600])</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[69]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">n_trails_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span><span class="mi">10000</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
+<span class="n">efficiency_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">n_trails</span> <span class="ow">in</span> <span class="n">n_trails_list</span><span class="p">:</span>
+    <span class="n">new_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">efficiency_comparison</span><span class="p">(</span><span class="n">n_trails</span><span class="p">,</span><span class="n">n_steps</span><span class="p">))</span>
+    <span class="n">efficiency_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">((</span><span class="n">efficiency_df</span><span class="p">,</span><span class="n">new_df</span><span class="p">))</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[70]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">efficiency_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[70]:</div>
+
+<div class="output_html rendered_html output_subarea output_execute_result">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>err</th>
+      <th>method</th>
+      <th>n_steps</th>
+      <th>n_trails</th>
+      <th>runtime</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.000000</td>
+      <td>Black Scholes</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.000560</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1.505011</td>
+      <td>MC</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.003374</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.617521</td>
+      <td>OHMC</td>
+      <td>200</td>
+      <td>100</td>
+      <td>0.060418</td>
+    </tr>
+    <tr>
+      <th>0</th>
+      <td>0.000000</td>
+      <td>Black Scholes</td>
+      <td>200</td>
+      <td>600</td>
+      <td>0.000310</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1.338692</td>
+      <td>MC</td>
+      <td>200</td>
+      <td>600</td>
+      <td>0.015934</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="4.1-Variance-Reduction-Test">4.1 Variance Reduction Test<a class="anchor-link" href="#4.1-Variance-Reduction-Test">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[75]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="n">mc_trails</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;MC&quot;</span><span class="p">][</span><span class="s2">&quot;n_trails&quot;</span><span class="p">]</span>
+<span class="n">mc_err</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;MC&quot;</span><span class="p">][</span><span class="s2">&quot;err&quot;</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mc_trails</span><span class="p">,</span><span class="n">mc_err</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;regular MC&quot;</span><span class="p">)</span>
+
+<span class="n">ohmc_trails</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;OHMC&quot;</span><span class="p">][</span><span class="s2">&quot;n_trails&quot;</span><span class="p">]</span>
+<span class="n">ohmc_err</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;OHMC&quot;</span><span class="p">][</span><span class="s2">&quot;err&quot;</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ohmc_trails</span><span class="p">,</span><span class="n">ohmc_err</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;OHMC&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;n_trails&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;err&quot;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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
+ThhmZpbI/wch7vMz8kR/FQAAAABJRU5ErkJggg==
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="4.2-Runtime-Efficiency-Test">4.2 Runtime Efficiency Test<a class="anchor-link" href="#4.2-Runtime-Efficiency-Test">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[71]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="n">mc_runtime</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;MC&quot;</span><span class="p">][</span><span class="s2">&quot;runtime&quot;</span><span class="p">]</span>
+<span class="n">mc_err</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;MC&quot;</span><span class="p">][</span><span class="s2">&quot;err&quot;</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">mc_runtime</span><span class="p">,</span><span class="n">mc_err</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;regular MC&quot;</span><span class="p">)</span>
+
+<span class="n">ohmc_runtime</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;OHMC&quot;</span><span class="p">][</span><span class="s2">&quot;runtime&quot;</span><span class="p">]</span>
+<span class="n">ohmc_err</span> <span class="o">=</span> <span class="n">efficiency_df</span><span class="p">[</span><span class="n">efficiency_df</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;OHMC&quot;</span><span class="p">][</span><span class="s2">&quot;err&quot;</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">ohmc_runtime</span><span class="p">,</span><span class="n">ohmc_err</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;OHMC&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;runtime&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;err&quot;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYUAAAEKCAYAAAD9xUlFAAAABHNCSVQICAgIfAhkiAAAAAlwSFlz
+AAALEgAACxIB0t1+/AAAHzdJREFUeJzt3X2QVPW95/H3N+PcmvEhTArGG2XAwWQEEVBgNBLjXgxx
+RY0XfAgB3WvhJqVGjbmWumJSayiTm2vWbMwSJRSxKLSukZCIRBGDN2oki5ddBzA8KOAsKsxoxQkG
+DDqEAb/7R/ccmmYeTj+cPqd7Pq8qaqZP//r098xh+ju/Z3N3REREAD4RdwAiIpIcSgoiIhJQUhAR
+kYCSgoiIBJQUREQkoKQgIiIBJQUREQkoKYiISEBJQUREAsfEHUCuhgwZ4o2NjXGHISJSVtatW/dn
+d6/vr1zZJYXGxkZaWlriDkNEpKyY2dthyqn5SEREAkoKIiISUFIQEZFA2fUpiEh56urqoq2tjf37
+98cdSkWrqamhoaGB6urqvF6vpCAiJdHW1sYJJ5xAY2MjZhZ3OBXJ3dm9ezdtbW2MGDEir3Oo+UhE
+SmL//v0MHjxYCSFCZsbgwYMLqo0pKYhIySghRK/Qn/GAbT5avqGd+1dt4509nZxcV8udF41k+vih
+cYclIhKrAVlTWL6hnbuXbaJ9TycOtO/p5O5lm1i+oT3u0ESkTB1//PEFvX7y5MkMHz4cdw+OTZ8+
+/Yjzbt++nUsuuYSmpiYmTJjAjBkz+NOf/lTQ+2YbkEnh/lXb6Ow6dMSxzq5D3L9qW0wRiUgpuTsf
+f/xx4t6/rq6ONWvWALBnzx7efffd4Ln9+/dz6aWX8o1vfIM33niD9evXc9NNN9HR0VHU2AZkUnhn
+T2dOx0Wk9JZvaOe8+15gxJxnOO++Fwquyb/11luMHDmSa6+9ljFjxrBr1y6ee+45Jk2axIQJE/jK
+V77Cvn37AFi5ciWjRo1i4sSJ3HrrrXz5y18GYO7cufzoRz8KzjlmzBjeeuutI95n3759TJkyhQkT
+JjB27Fh+85vf9Pr+2WbOnMmSJUsAWLZsGVdccUXw3C9+8QsmTZrEZZddFhybPHkyY8aMKejnkm1A
+JoWT62pzOi4ipRVVE+8bb7zBTTfdxJYtWzjuuOP4/ve/z+9+9zvWr19Pc3MzP/7xj9m/fz833HAD
+zz77LOvWrcv5L/GamhqefPJJ1q9fz4svvsjtt98eNAllvv8pp5xy1GunTJnC6tWrOXToEEuWLOGr
+X/1q8NzmzZuZOHFiQdcfxoBMCndeNJLa6qojjtVWV3HnRSNjikhEMkXVxHvKKadw7rnnArB27Vpe
+e+01zjvvPM466yweeeQR3n77bbZu3cqpp54ajPOfNWtWTu/h7nz7299m3LhxfOlLX6K9vT1o9898
+/55UVVXxhS98gSVLltDZ2UkcK0IPyNFH3aOMNPpIJJmiauI97rjjgu/dnQsvvJDHH3/8iDKvvvpq
+r68/5phjjugL6Gk+wGOPPUZHRwfr1q2jurqaxsbGoFzm+/dm5syZXH755cydO/eI42eccQYvvfRS
+v68v1ICsKUAqMayZ80XevO9S1sz5ohKCSIKUoon33HPPZc2aNbS2tgLw4Ycfsn37dkaOHMmOHTuC
+voJf/vKXwWsaGxtZv349AOvXr+fNN9886rx79+7lxBNPpLq6mhdffJG33w61YnXg/PPP5+677z6q
+hnL11Vfz8ssv88wzzwTHVq9ezebNm3M6f38GbFIQkeQqRRNvfX09ixcvZtasWYwbN45JkyaxdetW
+amtrmT9/PlOnTmXixImccMIJDBo0CIArr7yS999/nzPOOIMHH3yQ00477ajzXnPNNbS0tDB27Fge
+ffRRRo0alVNcZsYdd9zBkCFDjjheW1vLihUr+OlPf0pTUxOjR49m/vz51Nf3u29Obu+fOSa2HDQ3
+N7s22REpP6+//jqnn3566PJxTjDdt28fxx9/PO7OzTffTFNTE7fddltJ3rsYevpZm9k6d2/u77UD
+sk9BRJJv+vihsTXr/vznP+eRRx7hwIEDjB8/nhtuuCGWOOKgpCAikuW2224rq5pBMalPQUREApEl
+BTNbZGbvmVmfXeNmdraZHTSzq6KKRUREwomyprAYmNpXATOrAn4IPBdhHCIiElJkScHdVwPv91Ps
+m8ATwHtRxSEiIuHF1qdgZkOBy4GfhSh7vZm1mFlLsVcEFJGBpa2tjWnTptHU1MRnPvMZvvWtb3Hg
+wAF+//vfBwvfdZs9eza//vWvgeQsbR21ODuafwLc5e79rl/r7gvdvdndm4s9UUNEBg5354orrmD6
+9Om88cYbbN++nX379vGd73wn1OuTsLR11OJMCs3AEjN7C7gKmG9m02OMR0SSZONSeGAMzK1Lfd24
+tOBTvvDCC9TU1HDdddcBqQXoHnjgARYtWsRHH33U7+uTsLR11GJLCu4+wt0b3b0R+DVwk7svjyse
+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
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="4.3-Conclusion">4.3 Conclusion<a class="anchor-link" href="#4.3-Conclusion">&#182;</a></h3><p>From the test, one can see OHMC reduce the variance considerably, which make it more appreciable when number of trails is limited. For example, if we can only make trails less than 1000, OHMC is definite better than regular MC. However the runtime efficiency is similar based our observation. It seems slightly stable than regular MC, but still not enough to affirm that.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span> 
+</pre></div>
+
+</div>
 </div>
 </div>
 
