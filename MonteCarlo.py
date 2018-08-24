@@ -153,10 +153,11 @@ class MonteCarlo:
         # before maturaty
         for i in np.arange(n_steps)[:0:-1]:
             holding_values_tp1 = holding_values_t
+            exercise_values_tp1 = exercise_values_t
             stock_prices_t = price_matrix[:, i]
             ITM_filter = payoff_fun(stock_prices_t) > 0  # ITM
             A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
-            b_matrix = holding_values_tp1[:, np.newaxis] * df
+            b_matrix = np.maximum(holding_values_tp1,exercise_values_tp1)[:, np.newaxis] * df
             A_prime_matrix = A_matrix[ITM_filter, :]
             b_prime_matrix = b_matrix[ITM_filter, :]
             lr = LinearRegression(fit_intercept=False)
@@ -275,7 +276,7 @@ class MonteCarlo:
 
         return BSDeltaBased_mc_price
 
-    def OHMCPricer(self, option_type='c', func_list=[lambda x: x ** 0, lambda x: x]):
+    def OHMCPricer(self, option_type='c', isAmerican=False, func_list=[lambda x: x ** 0, lambda x: x]):
         def _calculate_Q_matrix(S_k, S_kp1, df, df2, func_list):
             dS = df2 * S_kp1 - S_k
             A = np.array([func(S_k) for func in func_list]).T
@@ -291,21 +292,29 @@ class MonteCarlo:
         n_trials = self.n_trials
         n_steps = self.n_steps
         strike = self.K
+        exercise_matrix = self.exercise_matrix
+        holding_matrix = None
 
         if (option_type == "c"):
-            payoff = (price_matrix[:, n_steps] - strike)
+            payoff_fun = lambda x: np.maximum(x-strike,0)
+            # payoff = (price_matrix[:, n_steps] - strike)
         elif (option_type == "p"):
-            payoff = (strike - price_matrix[:, n_steps])
+            payoff_fun = lambda x: np.maximum(strike-x,0)
+            # payoff = (strike - price_matrix[:, n_steps])
         else:
             print("please enter the option type: (c/p)")
             return
 
-        payoff = matrix(np.where(payoff < 0, 0, payoff))
+        payoff = matrix(payoff_fun(price_matrix[:,n_steps]))
         vk = payoff * df
         #         print("regular MC price",regular_mc_price)
 
-        # k = 1,...,n_steps-1
+        # k = n_steps-1,...,1
         for k in range(n_steps - 1, 0, -1):
+            # print(k)
+            if isAmerican is True:
+                pass
+
             Sk = price_matrix[:, k]
             Skp1 = price_matrix[:, k + 1]
             Qk = matrix(_calculate_Q_matrix(Sk, Skp1, df, df2, func_list))
