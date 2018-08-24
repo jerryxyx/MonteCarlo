@@ -138,7 +138,8 @@ class MonteCarlo:
         price_matrix = self.price_matrix
         n_trials = self.n_trials
         n_steps = self.n_steps
-        exercise_matrix = np.zeros(price_matrix.shape)
+        exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
+        # american_values_matrix = np.zeros(price_matrix.shape)
 
         if (option_type == "c"):
             payoff_fun = lambda x: np.maximum(x - K, 0)
@@ -149,6 +150,7 @@ class MonteCarlo:
         stock_prices_t = price_matrix[:, -1]
         exercise_values_t = payoff_fun(stock_prices_t)
         holding_values_t = exercise_values_t
+        # american_values_matrix[:,-1] = exercise_values_t
 
         # before maturaty
         for i in np.arange(n_steps)[:0:-1]:
@@ -164,6 +166,7 @@ class MonteCarlo:
             lr.fit(A_prime_matrix, b_prime_matrix)
             holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0]
             exercise_values_t = payoff_fun(stock_prices_t)
+            # american_values_matrix[:,i] = np.maximum(holding_values_t,exercise_values_t)
             exercise_filter = (exercise_values_t > holding_values_t) & ITM_filter
             exercise_matrix[exercise_filter, i] = 1
 
@@ -176,13 +179,18 @@ class MonteCarlo:
         # exercise_matrix[:, 0] = exercise_value_0 > holding_value_0
 
         # redefine the exercise matrix since we should only exercise once
+        holding_matrix = np.zeros(exercise_matrix.shape, dtype=bool)
         for i in np.arange(n_trials):
             exercise_row = exercise_matrix[i, :]
             if (exercise_row.any()):
                 exercise_idx = np.where(exercise_row == 1)[0][0]
                 exercise_row[exercise_idx + 1:] = 0
+                holding_matrix[i,:exercise_idx+1] = 1
             else:
                 exercise_row[-1] = 1
+                holding_matrix[i, -1] = 1
+
+        self.holding_matrix = holding_matrix
         self.exercise_matrix = exercise_matrix
         return exercise_matrix
 
@@ -292,8 +300,8 @@ class MonteCarlo:
         n_trials = self.n_trials
         n_steps = self.n_steps
         strike = self.K
-        exercise_matrix = self.exercise_matrix
-        holding_matrix = None
+        # exercise_matrix = self.exercise_matrix
+        holding_matrix = self.holding_matrix
 
         if (option_type == "c"):
             payoff_fun = lambda x: np.maximum(x-strike,0)
@@ -305,43 +313,56 @@ class MonteCarlo:
             print("please enter the option type: (c/p)")
             return
 
-        payoff = matrix(payoff_fun(price_matrix[:,n_steps]))
+        if isAmerican is True:
+            holding_matrix = holding_matrix
+        else:
+            holding_matrix = np.ones(price_matrix.shape,dtype=bool)
+
+        # At maturity
+        holding_filter_k = holding_matrix[:, n_steps]
+        payoff = matrix(payoff_fun(price_matrix[holding_filter_k,n_steps]))
         vk = payoff * df
+        Sk = price_matrix[holding_filter_k,n_steps]
         #         print("regular MC price",regular_mc_price)
 
         # k = n_steps-1,...,1
         for k in range(n_steps - 1, 0, -1):
-            # print(k)
-            if isAmerican is True:
-                pass
 
-            Sk = price_matrix[:, k]
-            Skp1 = price_matrix[:, k + 1]
+            holding_filter_kp1 = holding_filter_k
+            holding_filter_k = holding_matrix[:, k]
+            Skp1 = price_matrix[holding_filter_kp1, k+1]
+            Sk = price_matrix[holding_filter_kp1, k]
             Qk = matrix(_calculate_Q_matrix(Sk, Skp1, df, df2, func_list))
             P = Qk.T * Qk
             q = Qk.T * vk
-            A = matrix(np.ones(n_trials, dtype=np.float64)).T * Qk
-            b = - matrix(np.ones(n_trials, dtype=np.float64)).T * vk
+            A = matrix(np.ones(holding_filter_kp1.sum(), dtype=np.float64)).T * Qk
+            b = - matrix(np.ones(holding_filter_kp1.sum(), dtype=np.float64)).T * vk
+            # print(Sk)
+            # print(Skp1)
+
             sol = solvers.coneqp(P=P, q=q, A=A, b=b)
             ak = sol["x"][:n_basis]
             bk = sol["x"][n_basis:]
-            vk = matrix(np.array([func(price_matrix[:, k]) for func in func_list])).T * ak * df
+            vk = matrix(np.array([func(price_matrix[holding_filter_k, k]) for func in func_list])).T * ak * df
+            # break
 
         # k = 0
         v0 = vk
-        S0 = price_matrix[:, 0]
-        S1 = price_matrix[:, 1]
+        holding_filter_1 = holding_filter_k
+        holding_filter_0 = holding_matrix[:, 0]
+        S0 = price_matrix[holding_filter_1, 0]
+        S1 = price_matrix[holding_filter_1, 1]
         dS0 = df2 * S1 - S0
-        Q0 = np.concatenate((-np.ones(n_trials)[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
+        Q0 = np.concatenate((-np.ones(holding_filter_1.sum())[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
         Q0 = matrix(Q0)
         P = Q0.T * Q0
         q = Q0.T * v0
-        A = matrix(np.ones(n_trials, dtype=np.float64)).T * Q0
-        b = - matrix(np.ones(n_trials, dtype=np.float64)).T * v0
+        A = matrix(np.ones(holding_filter_1.sum(), dtype=np.float64)).T * Q0
+        b = - matrix(np.ones(holding_filter_1.sum(), dtype=np.float64)).T * v0
         C1 = matrix(ak).T * np.array([func(S1) for func in func_list]).T
         sol = solvers.coneqp(P=P, q=q, A=A, b=b)
         self.sol = sol
-        residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
+        residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / holding_filter_1.sum()
         self.residual_risk = residual_risk[0]  # the value of unit matrix
 
         return sol["x"][0]
