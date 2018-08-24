@@ -188,7 +188,7 @@ class MonteCarlo:
                 holding_matrix[i,:exercise_idx+1] = 1
             else:
                 exercise_row[-1] = 1
-                holding_matrix[i, -1] = 1
+                holding_matrix[:] = 1
 
         self.holding_matrix = holding_matrix
         self.exercise_matrix = exercise_matrix
