@@ -300,8 +300,6 @@ class MonteCarlo:
         n_trials = self.n_trials
         n_steps = self.n_steps
         strike = self.K
-        # exercise_matrix = self.exercise_matrix
-        holding_matrix = self.holding_matrix
 
         if (option_type == "c"):
             payoff_fun = lambda x: np.maximum(x-strike,0)
@@ -314,7 +312,7 @@ class MonteCarlo:
             return
 
         if isAmerican is True:
-            holding_matrix = holding_matrix
+            holding_matrix = self.holding_matrix
         else:
             holding_matrix = np.ones(price_matrix.shape,dtype=bool)
 

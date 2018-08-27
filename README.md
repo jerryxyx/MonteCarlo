@@ -242,3 +242,13 @@ which is similar to the strategy in the optimal hedged Monte Carlo simulation wh
 
 ### 4.3 Optimal hedged Monte Carlo simulation
 **In conclusion, OHMC is just a control variates method with an optimization on top and it is more practical because we do not have an analytical formula for the hedge sensitivity (i.e. delta, gamma, etc.)**
+
+## OHMC couple with Least Square Monte Carlo (LSM)
+
+In order to price Amrican type options, we need to consider the problem of optimal exercise. LSM is a well-defined method to tackle this problem. In contrast, here we only utilize the information of exercise points along each simulation path using cross-sectional regression. Different from the original LSM, here we equipe basis functions to approximate price and hedge at each step similar to OHMC. And discuss independently at the inception.
+
+This combination create a magic reaction. Now we can not only price the American options but also hedge it! Moreover, it's model independent, model parameters or construction, dimension doesn't matter at all! We use Black-Scholes and Heston model as examples. What only matters is the underlying price trials. With it, we can calculate the following stuffs.
+
+* American options price
+* American options Greeks
+* American options optimal exercise boundary
