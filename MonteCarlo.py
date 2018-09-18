@@ -238,11 +238,11 @@ class MonteCarlo:
             # A2: there is no way to construct a portfolio
             american_values_tp1 = american_values_matrix[:,i+1]
             lr.fit(A_matrix, american_values_tp1[:,np.newaxis]*df)
-            holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0]
-            american_values_t = np.maximum(holding_values_t,exercise_values_t)
+            holding_values_t2 = np.dot(A_matrix, lr.coef_.T)[:, 0]
+            american_values_t = np.maximum(holding_values_t2,exercise_values_t)
             american_values_matrix[:,i] = american_values_t
             
-            
+        
         # i=0
         # regular martingale pricing
         american_value1 = american_values_matrix[:,1].mean() * df
@@ -264,7 +264,8 @@ class MonteCarlo:
         residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
         self.residual_risk = residual_risk[0]  # the value of unit matrix
         american_value2 = sol["x"][0]
-        print(american_value1,american_value2)
+        delta_hedge = sol["x"][1]
+        print(american_value1,american_value2,delta_hedge)
         american_values_matrix[:,0] = american_value2
         
         # holding_values_tp1 = holding_values_t
