@@ -205,42 +205,79 @@ class MonteCarlo:
         exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
         american_values_matrix = np.zeros(price_matrix.shape)
         # american_values_matrix = np.zeros(price_matrix.shape)
-
+        def __get_exp_holding_values(payoff_fun,sub_price_matrix,sub_exercise_matrix,df,american_values_t):
+            exercise_values_t = payoff_fun(sub_price_matrix[:,0])
+            ITM_filter = exercise_values_t > 0
+            # print(np.where(sub_exercise_matrix==1))
+            holding_values_t = sub_price_matrix[np.where(sub_exercise_matrix==1)]*df**(np.where(sub_exercise_matrix==1)[1])
+            A_matrix = np.array([func(sub_price_matrix[:,0]) for func in func_list]).T
+            b_matrix = holding_values_t[:, np.newaxis] # g_tau|Fi
+            A_prime_matrix = A_matrix[ITM_filter, :]
+            b_prime_matrix = b_matrix[ITM_filter, :]
+            # print(holding_values_t)
+            lr = LinearRegression(fit_intercept=False)
+            lr.fit(A_prime_matrix, b_prime_matrix)
+            exp_holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only ITM
+            sub_exercise_matrix[:,0] = exercise_values_t>exp_holding_values_t
+            american_values_t = np.maximum(exp_holding_values_t,exercise_values_t)
+            return exp_holding_values_t
+        
         if (option_type == "c"):
             payoff_fun = lambda x: np.maximum(x - K, 0)
         elif (option_type == "p"):
             payoff_fun = lambda x: np.maximum(K - x, 0)
-
+        
         # when contract is at the maturity
         stock_prices_t = price_matrix[:, -1]
         exercise_values_t = payoff_fun(stock_prices_t)
         holding_values_t = exercise_values_t
+        holding_values2_t = exercise_values_t
         american_values_matrix[:,-1] = exercise_values_t
-
+        exercise_matrix[:,-1] = 1
+        
         # before maturaty
         for i in np.arange(n_steps)[:0:-1]:
-            # A1
-            holding_values_tp1 = holding_values_t
-            exercise_values_tp1 = exercise_values_t
-            stock_prices_t = price_matrix[:, i]
-            ITM_filter = payoff_fun(stock_prices_t) > 0  # ITM
-            A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
-            b_matrix = np.maximum(holding_values_tp1,exercise_values_tp1)[:, np.newaxis] * df
-            A_prime_matrix = A_matrix[ITM_filter, :]
-            b_prime_matrix = b_matrix[ITM_filter, :]
-            lr = LinearRegression(fit_intercept=False)
-            lr.fit(A_prime_matrix, b_prime_matrix)
-            holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0]
-            exercise_values_t = payoff_fun(stock_prices_t)
-            exercise_filter = (exercise_values_t > holding_values_t) & ITM_filter
-            exercise_matrix[exercise_filter, i] = 1
+            # A1 only ITM
+            sub_price_matrix = price_matrix[:,i:]
+            sub_exercise_matrix = exercise_matrix[:,i:]
+            
+            exp_holding_values_t = __get_exp_holding_values(payoff_fun,sub_price_matrix,sub_exercise_matrix,df,american_values_matrix[:,i])
+            
+            # holding_values_tp1 = holding_values_t
+            # stock_prices_t = price_matrix[:, i]
+            # exercise_values_t = payoff_fun(stock_prices_t)
+            
+            # ITM_filter = payoff_fun(stock_prices_t) > 0  # ITM, more feasible for global basis
+            # A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
+            # b_matrix = df * holding_values_tp1[:, np.newaxis] # E[g_tau|Fi]
+            # A_prime_matrix = A_matrix[ITM_filter, :]
+            # b_prime_matrix = b_matrix[ITM_filter, :]
+            # lr = LinearRegression(fit_intercept=False)
+            # lr.fit(A_prime_matrix, b_prime_matrix)
+            # holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0] # expectation operator (american value) only ITM
+            # exercise_filter = (exercise_values_t > holding_values_t) & ITM_filter
+            # exercise_matrix[exercise_filter, i] = 1
 
-            # A2: there is no way to construct a portfolio
-            american_values_tp1 = american_values_matrix[:,i+1]
-            lr.fit(A_matrix, american_values_tp1[:,np.newaxis]*df)
-            holding_values_t2 = np.dot(A_matrix, lr.coef_.T)[:, 0]
-            american_values_t = np.maximum(holding_values_t2,exercise_values_t)
-            american_values_matrix[:,i] = american_values_t
+            # A1 with all cases
+            # stock_prices_t = price_matrix[:, i]
+            # A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
+            # holding_values2_tp1 = holding_values2_t
+            # stock_prices_t = price_matrix[:, i]
+            # exercise_values_t = payoff_fun(stock_prices_t)
+            # ITM_filter = payoff_fun(stock_prices_t) > 0  # ITM, more feasible for global basis
+            # A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
+            # b_matrix = df * holding_values_tp1[:, np.newaxis] # E[g_tau|Fi]
+            
+            # lr2 = LinearRegression(fit_intercept=False)
+            # lr2.fit(A_matrix, b_matrix)
+            # holding_values2_t = np.dot(A_matrix, lr2.coef_.T)[:, 0] # expectation operator (american value) all cases
+            # exercise_filter2 = (exercise_values_t > holding_values2_t) & ITM_filter
+            ## exercise_matrix[exercise_filter2, i] = 1            
+            # american_values_tp1 = american_values_matrix[:,i+1]
+            ## lr.fit(A_matrix, american_values_tp1[:,np.newaxis]*df)
+            ## holding_values_t2 = np.dot(A_matrix, lr.coef_.T)[:, 0]
+            # american_values_t = np.maximum(holding_values2_t,exercise_values_t)
+            # american_values_matrix[:,i] = american_values_t
             
         
         # i=0
@@ -265,7 +302,7 @@ class MonteCarlo:
         self.residual_risk = residual_risk[0]  # the value of unit matrix
         american_value2 = sol["x"][0]
         delta_hedge = sol["x"][1]
-        print(american_value1,american_value2,delta_hedge)
+        # print(american_value1,american_value2,delta_hedge)
         american_values_matrix[:,0] = american_value2
         
         # holding_values_tp1 = holding_values_t
@@ -333,17 +370,15 @@ class MonteCarlo:
             payoff = payoff_fun(price_matrix[:, n_steps])
             #         vk = payoff*df
             value_results = payoff * np.exp(-risk_free_rate * time_to_maturity)
-            regular_mc_price = np.average(value_results)
             self.payoff = payoff
-            self.mc_price = regular_mc_price
-            self.value_results = value_results
         else:
             exercise_matrix = self.exercise_matrix
             t_exercise_array = dt * np.where(exercise_matrix == 1)[1]
             value_results = payoff_fun(price_matrix[np.where(exercise_matrix == 1)]) * np.exp(-risk_free_rate * t_exercise_array)
-            regular_mc_price = np.average(value_results)
-            self.mc_price = regular_mc_price
-            self.value_results = value_results
+            
+        regular_mc_price = np.average(value_results)
+        self.mc_price = regular_mc_price
+        self.value_results = value_results
         return regular_mc_price
 
     def BSDeltaHedgedPricer(self, option_type="c"):
