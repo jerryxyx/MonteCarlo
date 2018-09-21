@@ -131,8 +131,70 @@ class MonteCarlo:
 
         return price_matrix
 
-    
-    def LSM(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x],onlyITM=False,buy_cost=0,sell_cost=0):
+    def LSM(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x]):
+        dt = self.T / self.n_steps
+        df = np.exp(-self.r * dt)
+        K = self.K
+        price_matrix = self.price_matrix
+        n_trials = self.n_trials
+        n_steps = self.n_steps
+        exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
+        # american_values_matrix = np.zeros(price_matrix.shape)
+
+        if (option_type == "c"):
+            payoff_fun = lambda x: np.maximum(x - K, 0)
+        elif (option_type == "p"):
+            payoff_fun = lambda x: np.maximum(K - x, 0)
+
+        # when contract is at the maturity
+        stock_prices_t = price_matrix[:, -1]
+        exercise_values_t = payoff_fun(stock_prices_t)
+        holding_values_t = exercise_values_t
+        # american_values_matrix[:,-1] = exercise_values_t
+
+        # before maturaty
+        for i in np.arange(n_steps)[:0:-1]:
+            holding_values_tp1 = holding_values_t
+            exercise_values_tp1 = exercise_values_t
+            stock_prices_t = price_matrix[:, i]
+            ITM_filter = payoff_fun(stock_prices_t) > 0  # ITM
+            A_matrix = np.array([func(stock_prices_t) for func in func_list]).T
+            b_matrix = np.maximum(holding_values_tp1,exercise_values_tp1)[:, np.newaxis] * df
+            A_prime_matrix = A_matrix[ITM_filter, :]
+            b_prime_matrix = b_matrix[ITM_filter, :]
+            lr = LinearRegression(fit_intercept=False)
+            lr.fit(A_prime_matrix, b_prime_matrix)
+            holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0]
+            exercise_values_t = payoff_fun(stock_prices_t)
+            # american_values_matrix[:,i] = np.maximum(holding_values_t,exercise_values_t)
+            exercise_filter = (exercise_values_t > holding_values_t) & ITM_filter
+            exercise_matrix[exercise_filter, i] = 1
+
+        # i=0
+        # holding_values_tp1 = holding_values_t
+        #
+        # stock_price_0 = price_matrix[0, 0]
+        # holding_value_0 = np.mean(holding_values_tp1 * df)
+        # exercise_value_0 = payoff_fun(stock_price_0)
+        # exercise_matrix[:, 0] = exercise_value_0 > holding_value_0
+
+        # redefine the exercise matrix since we should only exercise once
+        holding_matrix = np.zeros(exercise_matrix.shape, dtype=bool)
+        for i in np.arange(n_trials):
+            exercise_row = exercise_matrix[i, :]
+            if (exercise_row.any()):
+                exercise_idx = np.where(exercise_row == 1)[0][0]
+                exercise_row[exercise_idx + 1:] = 0
+                holding_matrix[i,:exercise_idx+1] = 1
+            else:
+                exercise_row[-1] = 1
+                holding_matrix[i,:] = 1
+
+        self.holding_matrix = holding_matrix
+        self.exercise_matrix = exercise_matrix
+        return exercise_matrix
+    # LSM with only ITM approximation
+    def LSM2(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x]):
         dt = self.T / self.n_steps
         df = np.exp(-self.r * dt)
         df2 = np.exp(-(self.r - self.q) * dt)
@@ -143,8 +205,105 @@ class MonteCarlo:
         exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
         american_values_matrix = np.zeros(price_matrix.shape)
         
+        def __calc_american_values(payoff_fun,sub_price_matrix,sub_exercise_matrix,df):
+            exercise_values_t = payoff_fun(sub_price_matrix[:,0])
+            ITM_filter = exercise_values_t > 0
+            n_sub_trials, n_sub_steps = sub_price_matrix.shape
+            holding_values_t = np.zeros(n_sub_trials)
+            itemindex = np.where(sub_exercise_matrix==1)
+            for trial_i in range(n_sub_trials):                
+                first = next(itemindex[1][i] for i,x in enumerate(itemindex[0]) if x==trial_i)
+                payoff_i = payoff_fun(sub_price_matrix[trial_i, first])
+                df_i = df**(n_sub_steps-first)
+                holding_values_t[trial_i] = payoff_i*df_i
+            
+            A_matrix = np.array([func(sub_price_matrix[:,0]) for func in func_list]).T
+            b_matrix = holding_values_t[:, np.newaxis] # g_tau|Fi
+            A_prime_matrix = A_matrix[ITM_filter, :]
+            b_prime_matrix = b_matrix[ITM_filter, :]
+            lr = LinearRegression(fit_intercept=False)
+            lr.fit(A_prime_matrix, b_prime_matrix)
+            exp_holding_values_t = np.dot(A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only ITM
+            exp_holding_values_t[np.invert(ITM_filter)] = np.nan
+            sub_exercise_matrix[:,0] = ITM_filter & (exercise_values_t>exp_holding_values_t)
+            american_values_t = np.maximum(exp_holding_values_t,exercise_values_t)
+            return american_values_t
         
-        def __calc_american_values(payoff_fun,func_list, sub_price_matrix,sub_exercise_matrix,df,onlyITM=False):
+        if (option_type == "c"):
+            payoff_fun = lambda x: np.maximum(x - K, 0)
+        elif (option_type == "p"):
+            payoff_fun = lambda x: np.maximum(K - x, 0)
+        
+        # when contract is at the maturity
+        stock_prices_t = price_matrix[:, -1]
+        exercise_values_t = payoff_fun(stock_prices_t)
+        holding_values_t = exercise_values_t
+        american_values_matrix[:,-1] = exercise_values_t
+        exercise_matrix[:,-1] = 1
+        
+        # before maturaty
+        for i in np.arange(n_steps)[:0:-1]:
+            # A1 only ITM
+            sub_price_matrix = price_matrix[:,i:]
+            sub_exercise_matrix = exercise_matrix[:,i:]
+            american_values_t = __calc_american_values(payoff_fun,sub_price_matrix,sub_exercise_matrix,df)
+            american_values_matrix[:,i] = american_values_t
+        
+        # i=0
+        # regular martingale pricing: LSM
+        american_value1 = american_values_matrix[:,1].mean() * df
+        # with delta hedging: OHMC
+        v0 = matrix((american_values_matrix[:,1] * df)[:,np.newaxis])
+        S0 = price_matrix[:, 0]
+        S1 = price_matrix[:, 1]
+        dS0 = df * S1 - S0
+        Q0 = np.concatenate((-np.ones(n_trials)[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
+        Q0 = matrix(Q0)
+        P = Q0.T * Q0
+        q = Q0.T * v0
+        A = matrix(np.ones(n_trials, dtype=np.float64)).T * Q0
+        b = - matrix(np.ones(n_trials, dtype=np.float64)).T * v0
+        sol = solvers.coneqp(P=P, q=q, A=A, b=b)
+        self.sol = sol
+        residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
+        self.residual_risk = residual_risk[0]  # the value of unit matrix
+        american_value2 = sol["x"][0]
+        delta_hedge = sol["x"][1]
+        american_values_matrix[:,0] = american_value2
+        
+        # obtain the optimal policies at the inception
+        holding_matrix = np.zeros(exercise_matrix.shape, dtype=bool)
+        for i in np.arange(n_trials):
+            exercise_row = exercise_matrix[i, :]
+            if (exercise_row.any()):
+                exercise_idx = np.where(exercise_row == 1)[0][0]
+                exercise_row[exercise_idx + 1:] = 0
+                holding_matrix[i,:exercise_idx+1] = 1
+            else:
+                exercise_row[-1] = 1
+                holding_matrix[i,:] = 1
+
+        self.holding_matrix = holding_matrix
+        self.exercise_matrix = exercise_matrix
+        self.american_values_matrix = american_values_matrix
+        
+        self.american_price = american_value2
+        self.american_delta = delta_hedge
+        return american_value2, delta_hedge
+    
+    # LSM with non-conformed approximation
+    def LSM3(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x]):
+        dt = self.T / self.n_steps
+        df = np.exp(-self.r * dt)
+        df2 = np.exp(-(self.r - self.q) * dt)
+        K = self.K
+        price_matrix = self.price_matrix
+        n_trials = self.n_trials
+        n_steps = self.n_steps
+        exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
+        american_values_matrix = np.zeros(price_matrix.shape)
+        
+        def __calc_american_values(payoff_fun,func_list, sub_price_matrix,sub_exercise_matrix,df):
             exercise_values_t = payoff_fun(sub_price_matrix[:,0])
             ITM_filter = exercise_values_t > 0
             OTM_filter = exercise_values_t <= 0
@@ -153,7 +312,6 @@ class MonteCarlo:
             exp_holding_values_t = np.zeros(n_sub_trials) # regressed results: E[y]
             
             itemindex = np.where(sub_exercise_matrix==1)
-            # print(sub_exercise_matrix)
             for trial_i in range(n_sub_trials):                
                 first = next(itemindex[1][i] for i,x in enumerate(itemindex[0]) if x==trial_i)
                 payoff_i = payoff_fun(sub_price_matrix[trial_i, first])
@@ -163,21 +321,16 @@ class MonteCarlo:
             A_matrix = np.array([func(sub_price_matrix[:,0]) for func in func_list]).T
             b_matrix = holding_values_t[:, np.newaxis] # g_tau|Fi
             ITM_A_matrix = A_matrix[ITM_filter, :]
-            ITM_b_matrix = b_matrix[ITM_filter, :]           
+            ITM_b_matrix = b_matrix[ITM_filter, :]
+            OTM_A_matrix = A_matrix[OTM_filter, :]
+            OTM_b_matrix = b_matrix[OTM_filter, :]
             lr = LinearRegression(fit_intercept=False)
+            # non-conformed approximation: do not assure the continuity of the approximation.
             lr.fit(ITM_A_matrix, ITM_b_matrix)
             exp_holding_values_t[ITM_filter] = np.dot(ITM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only ITM
             
-            if onlyITM:
-                # Original LSM
-                exp_holding_values_t[OTM_filter] = np.nan
-            else:
-                # non-conformed approximation: do not assure the continuity of the approximation.
-                OTM_A_matrix = A_matrix[OTM_filter, :]
-                OTM_b_matrix = b_matrix[OTM_filter, :]
-                lr.fit(OTM_A_matrix, OTM_b_matrix)
-                exp_holding_values_t[OTM_filter] = np.dot(OTM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only OTM
-            
+            lr.fit(OTM_A_matrix, OTM_b_matrix)
+            exp_holding_values_t[OTM_filter] = np.dot(OTM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only OTM
             
             sub_exercise_matrix[:,0] = ITM_filter & (exercise_values_t>exp_holding_values_t)
             american_values_t = np.maximum(exp_holding_values_t,exercise_values_t)
@@ -199,10 +352,30 @@ class MonteCarlo:
         for i in np.arange(n_steps)[:0:-1]:
             sub_price_matrix = price_matrix[:,i:]
             sub_exercise_matrix = exercise_matrix[:,i:]
-            american_values_t = __calc_american_values(payoff_fun,func_list,sub_price_matrix,sub_exercise_matrix,df,onlyITM)
+            american_values_t = __calc_american_values(payoff_fun,sub_price_matrix,sub_exercise_matrix,df)
             american_values_matrix[:,i] = american_values_t
         
-        
+        # i=0
+        # regular martingale pricing: LSM
+        american_value1 = american_values_matrix[:,1].mean() * df
+        # with delta hedging: OHMC
+        v0 = matrix((american_values_matrix[:,1] * df)[:,np.newaxis])
+        S0 = price_matrix[:, 0]
+        S1 = price_matrix[:, 1]
+        dS0 = df * S1 - S0
+        Q0 = np.concatenate((-np.ones(n_trials)[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
+        Q0 = matrix(Q0)
+        P = Q0.T * Q0
+        q = Q0.T * v0
+        A = matrix(np.ones(n_trials, dtype=np.float64)).T * Q0
+        b = - matrix(np.ones(n_trials, dtype=np.float64)).T * v0
+        sol = solvers.coneqp(P=P, q=q, A=A, b=b)
+        self.sol = sol
+        residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
+        self.residual_risk = residual_risk[0]  # the value of unit matrix
+        american_value2 = sol["x"][0]
+        delta_hedge = sol["x"][1]
+        american_values_matrix[:,0] = american_value2
         
         # obtain the optimal policies at the inception
         holding_matrix = np.zeros(exercise_matrix.shape, dtype=bool)
@@ -216,37 +389,13 @@ class MonteCarlo:
                 exercise_row[-1] = 1
                 holding_matrix[i,:] = 1
 
-        if onlyITM==False:
-            # i=0
-            # regular martingale pricing: LSM
-            american_value1 = american_values_matrix[:,1].mean() * df
-            # with delta hedging: OHMC
-            v0 = matrix((american_values_matrix[:,1] * df)[:,np.newaxis])
-            S0 = price_matrix[:, 0]
-            S1 = price_matrix[:, 1]
-            dS0 = df2 * S1 * (1-sell_cost) - S0*(1+buy_cost)
-            Q0 = np.concatenate((-np.ones(n_trials)[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
-            Q0 = matrix(Q0)
-            P = Q0.T * Q0
-            q = Q0.T * v0
-            A = matrix(np.ones(n_trials, dtype=np.float64)).T * Q0
-            b = - matrix(np.ones(n_trials, dtype=np.float64)).T * v0
-            sol = solvers.coneqp(P=P, q=q, A=A, b=b)
-            self.sol = sol
-            residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
-            self.residual_risk = residual_risk[0]  # the value of unit matrix
-            american_value2 = sol["x"][0]
-            delta_hedge = sol["x"][1]
-            american_values_matrix[:,0] = american_value2
-            self.american_values_matrix = american_values_matrix
-            self.HLSM_price = american_value2
-            self.HLSM_delta = - delta_hedge
-            print("price: {}, delta-hedge: {}".format(american_value2,delta_hedge))
-        
         self.holding_matrix = holding_matrix
         self.exercise_matrix = exercise_matrix
+        self.american_values_matrix = american_values_matrix
         
-        pass
+        self.american_price = american_value2
+        self.american_delta = delta_hedge
+        return american_value2, delta_hedge
 
     def BlackScholesPricer(self, option_type='c'):
         S = self.S0
@@ -260,18 +409,12 @@ class MonteCarlo:
         N = lambda x: sp.stats.norm.cdf(x)
         call = np.exp(-q * T) * S * N(d1) - np.exp(-r * T) * K * N(d2)
         put = call - np.exp(-q * T) * S + K * np.exp(-r * T)
-        
         if (option_type == "c"):
-            self.BSDelta = N(d1)
-            self.BSPrice = call
             return call
         elif (option_type == "p"):
-            self.BSDelta = -N(-d1)
-            self.BSPrice = put
             return put
         else:
             print("please enter the option type: (c/p)")
-        
         pass
 
     def MCPricer(self, option_type='c', isAmerican=False):
