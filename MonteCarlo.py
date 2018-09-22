@@ -247,7 +247,95 @@ class MonteCarlo:
         self.exercise_matrix = exercise_matrix
         
         pass
+    
+    def LSM2(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x],onlyITM=False,buy_cost=0,sell_cost=0):
+        dt = self.T / self.n_steps
+        df = np.exp(-self.r * dt)
+        df2 = np.exp(-(self.r - self.q) * dt)
+        K = self.K
+        price_matrix = self.price_matrix
+        n_trials = self.n_trials
+        n_steps = self.n_steps
+        exercise_matrix = np.zeros(price_matrix.shape,dtype=bool)
+        american_values_matrix = np.zeros(price_matrix.shape)
+        
+        
+        def __calc_american_values(payoff_fun,func_list, prices_t, american_values_tp1,df):
+            exercise_values_t = payoff_fun(prices_t[:])
+            ITM_filter = exercise_values_t > 0
+            OTM_filter = exercise_values_t <= 0
+            n_sub_trials = len(prices_t)
+            holding_values_t = df*american_values_tp1 # simulated samples: y
+            exp_holding_values_t = np.zeros(n_sub_trials) # regressed results: E[y]
+            
+            
+            A_matrix = np.array([func(prices_t[:]) for func in func_list]).T
+            b_matrix = holding_values_t[:, np.newaxis] # g_tau|Fi
+            ITM_A_matrix = A_matrix[ITM_filter, :]
+            ITM_b_matrix = b_matrix[ITM_filter, :]           
+            lr = LinearRegression(fit_intercept=False)
+            lr.fit(ITM_A_matrix, ITM_b_matrix)
+            exp_holding_values_t[ITM_filter] = np.dot(ITM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only ITM
+            
+            OTM_A_matrix = A_matrix[OTM_filter, :]
+            OTM_b_matrix = b_matrix[OTM_filter, :]
+            lr.fit(OTM_A_matrix, OTM_b_matrix)
+            exp_holding_values_t[OTM_filter] = np.dot(OTM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only OTM
+     
+            american_values_t = np.maximum(exp_holding_values_t,exercise_values_t)
+            return american_values_t
+        
+        if (option_type == "c"):
+            payoff_fun = lambda x: np.maximum(x - K, 0)
+        elif (option_type == "p"):
+            payoff_fun = lambda x: np.maximum(K - x, 0)
+        
+        # when contract is at the maturity
+        exercise_values_t = payoff_fun(price_matrix[:,-1])
+        american_values_matrix[:,-1] = exercise_values_t
+        american_values_t = exercise_values_t
+        
+        # before maturaty
+        for i in np.arange(n_steps)[:0:-1]:
+            prices_t = price_matrix[:,i]
+            american_values_tp1 = american_values_t
+            american_values_t = __calc_american_values(payoff_fun,func_list,prices_t, american_values_tp1,df)
+            american_values_matrix[:,i] = american_values_t
+        
+        
+        
+        # obtain the optimal policies at the inception
+        
 
+        
+        # i=0
+        # regular martingale pricing: LSM
+        american_value1 = american_values_matrix[:,1].mean() * df
+        # with delta hedging: OHMC
+        v0 = matrix((american_values_matrix[:,1] * df)[:,np.newaxis])
+        S0 = price_matrix[:, 0]
+        S1 = price_matrix[:, 1]
+        dS0 = df2 * S1 * (1-sell_cost) - S0*(1+buy_cost)
+        Q0 = np.concatenate((-np.ones(n_trials)[:, np.newaxis], dS0[:, np.newaxis]), axis=1)
+        Q0 = matrix(Q0)
+        P = Q0.T * Q0
+        q = Q0.T * v0
+        A = matrix(np.ones(n_trials, dtype=np.float64)).T * Q0
+        b = - matrix(np.ones(n_trials, dtype=np.float64)).T * v0
+        sol = solvers.coneqp(P=P, q=q, A=A, b=b)
+        self.sol = sol
+        residual_risk = (v0.T * v0 + 2 * sol["primal objective"]) / n_trials
+        self.residual_risk = residual_risk[0]  # the value of unit matrix
+        american_value2 = sol["x"][0]
+        delta_hedge = sol["x"][1]
+        american_values_matrix[:,0] = american_value2
+        self.american_values_matrix = american_values_matrix
+        self.HLSM_price = american_value2
+        self.HLSM_delta = - delta_hedge
+        print("price: {}, delta-hedge: {}".format(american_value2,delta_hedge))
+        
+        pass
+    
     def BlackScholesPricer(self, option_type='c'):
         S = self.S0
         K = self.K
