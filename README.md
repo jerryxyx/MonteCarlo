@@ -15,8 +15,9 @@ Please feel free to see the Monte Carlo engine: MonteCarlo.py
 * regular Monte Carlo simulation
 * optimal hedged Monte Carlo simulation
 * delta-based Monte Carlo simulation
-
 * Monte Carlo with antithetic variates
+* Least square method of Longstaff and Schiwatz (LSM)
+* Hedeged Least Square method (HLSM)
 
 ### Underlying Process
 
@@ -243,7 +244,9 @@ which is similar to the strategy in the optimal hedged Monte Carlo simulation wh
 ### 4.3 Optimal hedged Monte Carlo simulation
 **In conclusion, OHMC is just a control variates method with an optimization on top and it is more practical because we do not have an analytical formula for the hedge sensitivity (i.e. delta, gamma, etc.)**
 
-## OHMC couple with Least Square Monte Carlo (LSM)
+
+
+## 5 Add Hedging portfolio with the Least Square Monte Carlo (LSM)
 
 In order to price Amrican type options, we need to consider the problem of optimal exercise. LSM is a well-defined method to tackle this problem. In contrast, here we only utilize the information of exercise points along each simulation path using cross-sectional regression. Different from the original LSM, here we equipe basis functions to approximate price and hedge at each step similar to OHMC. And discuss independently at the inception.
 
@@ -252,3 +255,67 @@ This combination create a magic reaction. Now we can not only price the American
 * American options price
 * American options Greeks
 * American options optimal exercise boundary
+
+Here, Bouchard and Warin concluded two main dynamic strategy in American options pricing, A1 and A2. Besides, I equiped them with a hedging strategy:
+
+### 5.1 A1 strategy with optimal exercise time estimate
+
+* Initialization: $\tau(t_J) = T$
+* Backward induction: 
+* $\tau(t_j) = t_j \mathbf{1}_{\{g(t_j)\geq C(t_j)\}} + \tau(t_{j+1})\mathbf{1}_{\{Z(t_j)<C(t_j)\}}$
+* Price estimator at 0:$P_0 = E[g(\tau(t_0),X_{\tau(t_0)})]$
+
+
+### 5.2 A2 strategy with American values estimate
+
+* Initialization: $P_T = g(T,X_T)$
+* Backward induction: $P_{t_j} = max\{g(t_j,X_{t_j}),E[P_{t_{j+1}}]\}$
+* Price estimator at 0: $P_0$
+
+### 5.3 A2b strategy with optimal exercise time estimate and American values estimate
+
+* Initialization: $\tau(t_J) = T$
+* Backward induction: 
+    * $\tau(t_j) = t_j \mathbf{1}_{\{g(t_j)\geq C(t_j)\}} + \tau(t_{j+1})\mathbf{1}_{\{Z(t_j)<C(t_j)\}}$
+    * Price estimator at j:$P_j = E[g(\tau(t_j),X_{\tau(t_j)})]$ for $j=J,J-1,\cdots,1$
+* Price estimator at 0 (one-step hedged MC): ${arg\,min}_{P_0,H_0} E[(\Delta W_0)^2]$
+
+
+### 5.5 Performance Test:
+
+
+Black-Scholes model: HLSM-BlackScholes-American.ipynb
+Heston model: HLSM-Heston-American.ipynb
+
+In this document, we take Black-Scholes model as an example
+
+#### Parameters:
+
+    risk_free_rate = 0.06
+    dividend = 0.0
+    time_to_maturity = 1
+    volatility = 0.3
+    strike = 1.1
+    stock_price = 1
+    n_trials = 4000
+    n_steps = 20
+    func_list = [lambda x: x**0, lambda x: x] # basis for OHMC part
+    option_type = 'p'
+    
+#### Results:
+
+**American Options**
+
+|Algorithm | Price  | Delta  |
+|---|---|---|
+| A1  | 0.1499 | N/A  | 
+|  A2 |  0.1590 | 0.585  | 
+|  A2b |  0.1500 | 0.491  | 
+
+
+**European Options**
+
+* BS Formula: 0.1401
+* BS Binomial Tree: 0.1410
+* Regular MC: 0.1453
+* OHMC: 0.1426
