@@ -133,6 +133,11 @@ class MonteCarlo:
 
     
     def LSM(self, option_type="c", func_list=[lambda x: x ** 0, lambda x: x],onlyITM=False,buy_cost=0,sell_cost=0):
+        """
+        onlyITM=True: A1 strategy (i.e. LSM method from Longstaff and Schwartz)
+        onlyITM=False: A2b strategy (i.e. Hedged LSM method implemented by Yuxuan Xia)
+        """
+    
         dt = self.T / self.n_steps
         df = np.exp(-self.r * dt)
         df2 = np.exp(-(self.r - self.q) * dt)
@@ -168,15 +173,17 @@ class MonteCarlo:
             lr.fit(ITM_A_matrix, ITM_b_matrix)
             exp_holding_values_t[ITM_filter] = np.dot(ITM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only ITM
             
-            if onlyITM:
-                # Original LSM
-                exp_holding_values_t[OTM_filter] = np.nan
-            else:
-                # non-conformed approximation: do not assure the continuity of the approximation.
-                OTM_A_matrix = A_matrix[OTM_filter, :]
-                OTM_b_matrix = b_matrix[OTM_filter, :]
-                lr.fit(OTM_A_matrix, OTM_b_matrix)
-                exp_holding_values_t[OTM_filter] = np.dot(OTM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only OTM
+            
+            if np.sum(OTM_filter): # if no trial falls into the OTM region it would cause empty OTM_A_Matrix and OTM_b_Matrix, and only ITM was applicable. In this step, we are going to estimate the OTM American values E[g_tau|Fi].
+                if onlyITM:
+                    # Original LSM
+                    exp_holding_values_t[OTM_filter] = np.nan
+                else:
+                    # non-conformed approximation: do not assure the continuity of the approximation (regression in two region without iterpolation)
+                    OTM_A_matrix = A_matrix[OTM_filter, :]
+                    OTM_b_matrix = b_matrix[OTM_filter, :]
+                    lr.fit(OTM_A_matrix, OTM_b_matrix)
+                    exp_holding_values_t[OTM_filter] = np.dot(OTM_A_matrix, lr.coef_.T)[:, 0] # E[g_tau|Fi] only OTM
             
             
             sub_exercise_matrix[:,0] = ITM_filter & (exercise_values_t>exp_holding_values_t)
